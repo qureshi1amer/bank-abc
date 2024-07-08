@@ -56,9 +56,8 @@ export default {
     async created() {
         try {
             const response = await api.get('v1/transactions');
-            this.inwards = response.data.inwards;
-            this.outwards = response.data.outwards;
-
+            this.inwards = response.data.data.inwards;
+            this.outwards = response.data.data.outwards;
         }
         catch (error) {
             console.error('Error fetching transactions:', error);

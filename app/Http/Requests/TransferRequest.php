@@ -28,7 +28,7 @@ class TransferRequest extends FormRequest
                     }
                 },
             ],
-            'amount' => ['required', 'numeric', 'min:0.01', new HasSufficientBalance],
+            'amount' => ['required', 'numeric', 'min:'.config('constants.minimum_transaction_limit'), new HasSufficientBalance],
         ];
     }
 
@@ -40,7 +40,7 @@ class TransferRequest extends FormRequest
             'to_account_id.exists' => 'The recipient account ID must exist.',
             'amount.required' => 'The amount is required.',
             'amount.numeric' => 'The amount must be a number.',
-            'amount.min' => 'The amount must be at least 0.01.',
+            'amount.min' => 'The amount must be at least' .config('constants.minimum_transaction_limit'),
         ];
     }
 }

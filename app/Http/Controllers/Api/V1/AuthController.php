@@ -7,6 +7,7 @@ use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Resources\AuthResource;
 use App\Models\Account;
+use App\Repositories\UserRepository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
@@ -15,25 +16,15 @@ use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
+    public function __construct(protected UserRepository $userRepository){}
 
     public function register(RegisterRequest $request)
     {
-        DB::beginTransaction();
         try {
-            $user = User::create($request->validated());
-            $user->account()->create(['balance' => 0.0]);
-            $token = $user->createToken('auth_token')->plainTextToken;
-            DB::commit();
-
-            return new AuthResource((object) ['message' => 'Registration successful','token' => $token, 'user' => $user]);
-        }
-        catch (\Exception $e) {
-
-            DB::rollBack();
-            Log::error('Error registering: ' . $e->getMessage());
-            return response()->json(['message' => 'Registration failed', 'error' => $e->getMessage()],
-                500
-            );
+            $result = $this->userRepository->register($request);
+            return response()->api($result, __('api.message.registration_successful'));
+        } catch (\Exception $e) {
+            return response()->api(['error' => $e->getMessage()], 'Registration failed', 500);
         }
     }
 
@@ -41,20 +32,24 @@ class AuthController extends Controller
     public function login(LoginRequest $request)
     {
 
-        if (!Auth::attempt($request->only('email', 'password'))) {
-            return response()->json(['message' => 'Invalid credentials'], 401);
+        try {
+            $result = $this->userRepository->login($request);
+            return response()->api($result, __('api.message.login_successful'));
         }
-        $user = Auth::user();
-
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        return new AuthResource( (object) ['message' => 'Login successful','token' => $token, 'user' => $user]);
+        catch (\Exception $e) {
+            return response()->api(['error' => $e->getMessage()], $e->getMessage(), $e->getCode());
+        }
     }
 
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
-        return response()->json(['message' => 'Logged out successfully']);
+        try {
+            $this->userRepository->logout($request);
+            return response()->api(null, __('api.message.logout_successful'));
+        }
+        catch (\Exception $e) {
+            return response()->api(['error' => $e->getMessage()], __('api.message.logout_failed'), 500);
+        }
     }
 }
